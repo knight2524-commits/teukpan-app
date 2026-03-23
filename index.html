@@ -443,11 +443,9 @@ function renderManage(){
   var its=itemList();
   var checkedIds={};
 
-  // ── 헤더 ──
-  var hrow=mkEl('div','');
-  hrow.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px';
-  var hs=mkEl('span','');hs.style.cssText='font-size:13px;font-weight:700;color:#fff';
-  hs.textContent='품목 관리 ('+its.length+'종)';
+  // 헤더
+  var hrow=mkEl('div','');hrow.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px';
+  var hs=mkEl('span','');hs.style.cssText='font-size:13px;font-weight:700;color:#fff';hs.textContent='품목 관리 ('+its.length+'종)';
   var bg=mkEl('div','');bg.style.cssText='display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end';
   var delSelBtn=mkEl('button','btn danger sm');delSelBtn.id='del-sel-btn';delSelBtn.style.display='none';
   var delAllBtn=mkEl('button','btn danger sm');delAllBtn.textContent='전체 삭제';
@@ -455,121 +453,117 @@ function renderManage(){
   bg.appendChild(delSelBtn);bg.appendChild(delAllBtn);bg.appendChild(addBtn);
   hrow.appendChild(hs);hrow.appendChild(bg);c.appendChild(hrow);
 
-  // ── 품목 추가 폼 ──
-  var addSec=mkEl('div','');addSec.id='manage-add-sec';addSec.style.display='none';
-  var addCard=mkEl('div','card pur-glow');
-  addCard.innerHTML=
-    '<div style="font-size:14px;font-weight:700;color:var(--pur);margin-bottom:14px">✚ 신규 품목 등록</div>'+
-    '<div style="display:flex;gap:6px;margin-bottom:16px">'+
-      '<button id="m-tab-manual" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid rgba(124,92,252,.4);background:var(--pur);color:#fff;font-size:13px;font-weight:700;font-family:sans-serif;cursor:pointer">✏️ 직접입력</button>'+
-      '<button id="m-tab-excel" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid rgba(124,92,252,.4);background:transparent;color:var(--t2);font-size:13px;font-weight:700;font-family:sans-serif;cursor:pointer">📊 엑셀업로드</button>'+
-    '</div>'+
-    '<div id="m-body-manual">'+
-      '<div style="margin-bottom:10px"><div class="lbl">품목명 *</div><input type="text" id="m-name" placeholder="예) 비타민C 세럼 30ml"></div>'+
-      '<div style="margin-bottom:10px"><div class="lbl">규격</div><input type="text" id="m-spec" value="EA"></div>'+
-      '<div class="g2" style="margin-bottom:10px">'+
-        '<div><div class="lbl">원가(일반)</div><input type="number" inputmode="numeric" id="m-costn" value="0"></div>'+
-        '<div><div class="lbl">원가(특판)</div><input type="number" inputmode="numeric" id="m-costs" value="0"></div>'+
-      '</div>'+
-      '<div class="g2" style="margin-bottom:10px">'+
-        '<div><div class="lbl">특약점가</div><input type="number" inputmode="numeric" id="m-priced" value="0"></div>'+
-        '<div><div class="lbl">특판가 *</div><input type="number" inputmode="numeric" id="m-psp" value="0"></div>'+
-      '</div>'+
-      '<div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">특판 조건</div>'+
-      '<div class="g2" style="margin-bottom:8px"><div><div class="lbl">조건1 수량</div><input type="number" inputmode="numeric" id="m-c1q" value="0"></div><div><div class="lbl">조건1 할인%</div><input type="number" inputmode="numeric" id="m-c1p" value="0"></div></div>'+
-      '<div class="g2" style="margin-bottom:8px"><div><div class="lbl">조건2 수량</div><input type="number" inputmode="numeric" id="m-c2q" value="0"></div><div><div class="lbl">조건2 할인%</div><input type="number" inputmode="numeric" id="m-c2p" value="0"></div></div>'+
-      '<div class="g2" style="margin-bottom:14px"><div><div class="lbl">조건3 수량</div><input type="number" inputmode="numeric" id="m-c3q" value="0"></div><div><div class="lbl">조건3 할인%</div><input type="number" inputmode="numeric" id="m-c3p" value="0"></div></div>'+
-      '<div style="margin-bottom:14px"><div class="lbl">특판계획 수량 *</div><input type="number" inputmode="numeric" id="m-planned" value="0"></div>'+
-    '</div>'+
-    '<div id="m-body-excel" style="display:none">'+
-      '<div style="background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:2;color:var(--t2)">'+
-        '<b style="color:#fff">📋 할인_및_프로모션_관리 양식</b><br>'+
-        'B:상품코드 C:품번 D:품명 E:규격<br>J:원가(일반) K:원가(특판) L:특약점가 M:특판가<br>'+
-        'Q/R:조건1 S/T:조건2 U/V:조건3<br>'+
-        '<span style="color:var(--t3);font-size:11px">3행부터 데이터 시작</span>'+
-      '</div>'+
-      '<div id="m-xl-drop" style="border:2px dashed rgba(124,92,252,.4);border-radius:12px;padding:24px 20px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:12px">'+
-        '<div style="font-size:32px;margin-bottom:8px">📊</div>'+
-        '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px">엑셀 파일 선택</div>'+
-        '<div style="font-size:12px;color:var(--t3)">.xlsx / .xls / .csv</div>'+
-        '<input type="file" id="m-xl-input" accept=".xlsx,.xls,.csv" style="display:none">'+
-      '</div>'+
-      '<div id="m-xl-preview" style="display:none">'+
-        '<div id="m-xl-count" style="font-size:12px;font-weight:700;color:var(--grn);margin-bottom:8px"></div>'+
-        '<div id="m-xl-table" style="overflow-x:auto;max-height:200px;overflow-y:auto;border-radius:10px;border:1px solid var(--bd)"></div>'+
-      '</div>'+
-    '</div>';
+  // 품목 추가 섹션 (DOM 방식 - 이스케이프 문제 없음)
+  var addSec=mkEl('div','card pur-glow');addSec.id='manage-add-sec';addSec.style.display='none';
 
+  var addTitle=mkEl('div','');addTitle.style.cssText='font-size:14px;font-weight:700;color:var(--pur);margin-bottom:14px';addTitle.textContent='✚ 신규 품목 등록';
+  addSec.appendChild(addTitle);
+
+  // 탭 버튼
+  var tabRow=mkEl('div','');tabRow.style.cssText='display:flex;gap:6px;margin-bottom:16px';
+  var tabM=mkEl('button','');tabM.style.cssText='flex:1;padding:9px;border-radius:8px;border:1.5px solid rgba(124,92,252,.4);background:var(--pur);color:#fff;font-size:13px;font-weight:700;cursor:pointer';tabM.textContent='✏️ 직접입력';
+  var tabE=mkEl('button','');tabE.style.cssText='flex:1;padding:9px;border-radius:8px;border:1.5px solid rgba(124,92,252,.4);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer';tabE.textContent='📊 엑셀업로드';
+  tabRow.appendChild(tabM);tabRow.appendChild(tabE);addSec.appendChild(tabRow);
+
+  // 직접입력 폼
+  var bodyM=mkEl('div','');bodyM.id='add-body-m';
+
+  function addField(parent, labelTxt, inputId, type, val, placeholder) {
+    var wrap=mkEl('div','');wrap.style.marginBottom='10px';
+    var lbl=mkEl('div','lbl');lbl.textContent=labelTxt;
+    var inp=document.createElement('input');
+    inp.type=type||'text';inp.id=inputId;
+    if(type==='number')inp.inputMode='numeric';
+    if(val!==undefined)inp.value=val;
+    if(placeholder)inp.placeholder=placeholder;
+    wrap.appendChild(lbl);wrap.appendChild(inp);
+    parent.appendChild(wrap);
+    return inp;
+  }
+  function addFieldPair(parent, l1, id1, l2, id2, v1, v2) {
+    var g=mkEl('div','g2');g.style.marginBottom='10px';
+    var w1=mkEl('div','');var lb1=mkEl('div','lbl');lb1.textContent=l1;var i1=document.createElement('input');i1.type='number';i1.inputMode='numeric';i1.id=id1;i1.value=v1||0;w1.appendChild(lb1);w1.appendChild(i1);
+    var w2=mkEl('div','');var lb2=mkEl('div','lbl');lb2.textContent=l2;var i2=document.createElement('input');i2.type='number';i2.inputMode='numeric';i2.id=id2;i2.value=v2||0;w2.appendChild(lb2);w2.appendChild(i2);
+    g.appendChild(w1);g.appendChild(w2);parent.appendChild(g);
+  }
+
+  addField(bodyM,'품목명 *','m-name','text',undefined,'예) 비타민C 세럼 30ml');
+  addField(bodyM,'규격','m-spec','text','EA');
+  addFieldPair(bodyM,'원가(일반)','m-costn','원가(특판)','m-costs');
+  addFieldPair(bodyM,'특약점가','m-priced','특판가 *','m-psp');
+  var condTitle=mkEl('div','lbl');condTitle.style.color='var(--acc)';condTitle.textContent='특판 조건';bodyM.appendChild(condTitle);
+  addFieldPair(bodyM,'조건1 수량','m-c1q','조건1 할인%','m-c1p');
+  addFieldPair(bodyM,'조건2 수량','m-c2q','조건2 할인%','m-c2p');
+  addFieldPair(bodyM,'조건3 수량','m-c3q','조건3 할인%','m-c3p');
+  addField(bodyM,'특판계획 수량 *','m-planned','number',0);
+  addSec.appendChild(bodyM);
+
+  // 엑셀 업로드 폼
+  var bodyE=mkEl('div','');bodyE.id='add-body-e';bodyE.style.display='none';
+  var xlGuide=mkEl('div','');xlGuide.style.cssText='background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.9;color:var(--t2)';
+  xlGuide.innerHTML='<b style="color:#fff">📋 할인_및_프로모션_관리 양식</b><br>B:상품코드 C:품번 D:품명 E:규격<br>J/K:원가 L:특약점가 M:특판가<br>Q~V:조건1~3<br><span style="color:var(--t3);font-size:11px">3행부터 데이터 시작</span>';
+  bodyE.appendChild(xlGuide);
+
+  var xlDrop=mkEl('div','');xlDrop.id='m-xl-drop';
+  xlDrop.style.cssText='border:2px dashed rgba(124,92,252,.4);border-radius:12px;padding:24px 20px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:12px';
+  xlDrop.innerHTML='<div style="font-size:32px;margin-bottom:8px">📊</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px">엑셀 파일 선택</div><div style="font-size:12px;color:var(--t3)">.xlsx / .xls / .csv</div>';
+  var xlInput=document.createElement('input');xlInput.type='file';xlInput.id='m-xl-input';xlInput.accept='.xlsx,.xls,.csv';xlInput.style.display='none';
+  xlDrop.appendChild(xlInput);bodyE.appendChild(xlDrop);
+
+  var xlPrev=mkEl('div','');xlPrev.id='m-xl-preview';xlPrev.style.display='none';
+  xlPrev.innerHTML='<div id="m-xl-count" style="font-size:12px;font-weight:700;color:var(--grn);margin-bottom:8px"></div><div id="m-xl-table" style="overflow-x:auto;max-height:200px;overflow-y:auto;border-radius:10px;border:1px solid var(--bd)"></div>';
+  bodyE.appendChild(xlPrev);
+  addSec.appendChild(bodyE);
+
+  // 저장/취소 버튼
   var afBrow=mkEl('div','brow');afBrow.style.marginTop='12px';
   var afCancel=mkEl('button','btn ghost sm');afCancel.textContent='취소';
   var afSave=mkEl('button','btn pur');afSave.style.flex='2';afSave.textContent='✅ 품목 등록';
   afBrow.appendChild(afCancel);afBrow.appendChild(afSave);
-  addCard.appendChild(afBrow);
-  addSec.appendChild(addCard);
+  addSec.appendChild(afBrow);
   c.appendChild(addSec);
 
-  // 품목 추가 버튼 토글
+  // 이벤트
   addBtn.addEventListener('click',function(){
     var open=addSec.style.display==='none';
     addSec.style.display=open?'block':'none';
     addBtn.textContent=open?'✕ 닫기':'+ 품목 추가';
     if(open)setTimeout(function(){var n=$('m-name');if(n)n.focus();},80);
   });
-  afCancel.addEventListener('click',function(){
-    addSec.style.display='none';
-    addBtn.textContent='+ 품목 추가';
-  });
-
-  // 탭 전환
-  $('m-tab-manual').addEventListener('click',function(){
-    $('m-body-manual').style.display='block';$('m-body-excel').style.display='none';
-    $('m-tab-manual').style.background='var(--pur)';$('m-tab-manual').style.color='#fff';
-    $('m-tab-excel').style.background='transparent';$('m-tab-excel').style.color='var(--t2)';
+  afCancel.addEventListener('click',function(){addSec.style.display='none';addBtn.textContent='+ 품목 추가';});
+  tabM.addEventListener('click',function(){
+    bodyM.style.display='block';bodyE.style.display='none';
+    tabM.style.background='var(--pur)';tabM.style.color='#fff';
+    tabE.style.background='transparent';tabE.style.color='var(--t2)';
     afSave.textContent='✅ 품목 등록';
   });
-  $('m-tab-excel').addEventListener('click',function(){
-    $('m-body-manual').style.display='none';$('m-body-excel').style.display='block';
-    $('m-tab-excel').style.background='var(--pur)';$('m-tab-excel').style.color='#fff';
-    $('m-tab-manual').style.background='transparent';$('m-tab-manual').style.color='var(--t2)';
+  tabE.addEventListener('click',function(){
+    bodyM.style.display='none';bodyE.style.display='block';
+    tabE.style.background='var(--pur)';tabE.style.color='#fff';
+    tabM.style.background='transparent';tabM.style.color='var(--t2)';
     afSave.textContent='✅ 일괄 등록';
   });
-
-  // 엑셀 드롭존
-  var xlDrop=$('m-xl-drop'),xlInput=$('m-xl-input');
-  if(xlDrop&&xlInput){
-    xlDrop.addEventListener('click',function(){xlInput.click();});
-    xlInput.addEventListener('change',function(){handleExcelManage(xlInput.files[0]);xlInput.value='';});
-    xlDrop.addEventListener('dragover',function(e){e.preventDefault();xlDrop.style.borderColor='var(--pur)';});
-    xlDrop.addEventListener('dragleave',function(){xlDrop.style.borderColor='rgba(124,92,252,.4)';});
-    xlDrop.addEventListener('drop',function(e){
-      e.preventDefault();xlDrop.style.borderColor='rgba(124,92,252,.4)';
-      if(e.dataTransfer.files[0])handleExcelManage(e.dataTransfer.files[0]);
-    });
-  }
-
-  // 저장 버튼 - 직접 addEventListener로 연결
+  xlDrop.addEventListener('click',function(){xlInput.click();});
+  xlInput.addEventListener('change',function(){handleExcelManage(xlInput.files[0]);xlInput.value='';});
+  xlDrop.addEventListener('dragover',function(e){e.preventDefault();xlDrop.style.borderColor='var(--pur)';});
+  xlDrop.addEventListener('dragleave',function(){xlDrop.style.borderColor='rgba(124,92,252,.4)';});
+  xlDrop.addEventListener('drop',function(e){e.preventDefault();xlDrop.style.borderColor='rgba(124,92,252,.4)';if(e.dataTransfer.files[0])handleExcelManage(e.dataTransfer.files[0]);});
   afSave.addEventListener('click',function(){
-    var eb=$('m-body-excel');
-    if(eb&&eb.style.display==='block') doAddExcelManage();
+    if(bodyE.style.display==='block')doAddExcelManage();
     else doAddManualNew();
   });
 
-  // ── 전체선택 체크박스 ──
+  // 전체선택
   if(its.length>0){
-    var caRow=mkEl('div','');
-    caRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:var(--bg2);border-radius:10px';
-    var caChk=document.createElement('input');
-    caChk.type='checkbox';caChk.style.cssText='width:18px;height:18px;cursor:pointer;accent-color:var(--acc)';
-    var caLbl=mkEl('span','');caLbl.style.cssText='font-size:13px;color:var(--t2);cursor:pointer';
-    caLbl.textContent='전체 선택';
+    var caRow=mkEl('div','');caRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:var(--bg2);border-radius:10px';
+    var caChk=document.createElement('input');caChk.type='checkbox';caChk.style.cssText='width:18px;height:18px;cursor:pointer;accent-color:var(--acc)';
+    var caLbl=mkEl('span','');caLbl.style.cssText='font-size:13px;color:var(--t2);cursor:pointer';caLbl.textContent='전체 선택';
     caLbl.addEventListener('click',function(){caChk.click();});
     caRow.appendChild(caChk);caRow.appendChild(caLbl);c.appendChild(caRow);
-
     caChk.addEventListener('change',function(){
       document.querySelectorAll('.item-chk').forEach(function(cb){
         cb.checked=caChk.checked;
-        if(caChk.checked)checkedIds[cb.dataset.id]=true;
-        else delete checkedIds[cb.dataset.id];
+        if(caChk.checked)checkedIds[cb.dataset.id]=true;else delete checkedIds[cb.dataset.id];
       });
       updateDelBtn();
     });
@@ -580,33 +574,23 @@ function renderManage(){
     delSelBtn.style.display=cnt>0?'inline-flex':'none';
     delSelBtn.textContent='선택 삭제 ('+cnt+'개)';
   }
-  function syncChk(){
-    var all=document.querySelectorAll('.item-chk');
-    var n=document.querySelectorAll('.item-chk:checked').length;
-    // 전체선택 체크박스는 caChk (로컬 변수)
-    updateDelBtn();
-  }
 
-  // ── 품목 카드 ──
+  // 품목 카드
   its.forEach(function(it){
     var card=mkEl('div','card');
     var cost=it.costSpecial||it.costNormal||0;
     var mg=mgp(it.priceSpecial||0,cost).toFixed(1);
     var mgC=+mg>=30?'var(--grn)':+mg>=15?'var(--amb)':'var(--red)';
+
+    var topRow=mkEl('div','');topRow.style.cssText='display:flex;align-items:flex-start;gap:10px;margin-bottom:8px';
+    var chk=document.createElement('input');chk.type='checkbox';chk.className='item-chk';chk.dataset.id=it.id;
+    chk.style.cssText='width:20px;height:20px;margin-top:2px;cursor:pointer;accent-color:var(--acc);flex-shrink:0';
+    var nb=mkEl('div','');nb.style.cssText='flex:1;min-width:0';
     var c1=it.cond1Qty?'<span style="color:var(--acc)"> · 조건1 '+it.cond1Qty+'개 '+it.cond1Pct+'%</span>':'';
     var c2=it.cond2Qty?'<span style="color:var(--grn)"> · 조건2 '+it.cond2Qty+'개 '+it.cond2Pct+'%</span>':'';
     var c3=it.cond3Qty?'<span style="color:var(--pur)"> · 조건3 '+it.cond3Qty+'개 '+it.cond3Pct+'%</span>':'';
-
-    var topRow=mkEl('div','');topRow.style.cssText='display:flex;align-items:flex-start;gap:10px;margin-bottom:8px';
-    var chk=document.createElement('input');
-    chk.type='checkbox';chk.className='item-chk';chk.dataset.id=it.id;
-    chk.style.cssText='width:20px;height:20px;margin-top:2px;cursor:pointer;accent-color:var(--acc);flex-shrink:0';
-    var nb=mkEl('div','');nb.style.cssText='flex:1;min-width:0';
-    nb.innerHTML=
-      '<div style="font-size:14px;font-weight:700;color:#fff">'+it.name+'</div>'+
-      '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+it.spec+
-        ' · 원가 ₩'+fmt(cost)+' · 특판가 ₩'+fmt(it.priceSpecial||0)+
-        ' · <b style="color:'+mgC+'">'+mg+'%</b>'+c1+c2+c3+'</div>';
+    nb.innerHTML='<div style="font-size:14px;font-weight:700;color:#fff">'+it.name+'</div>'+
+      '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+it.spec+' · 원가 ₩'+fmt(cost)+' · 특판가 ₩'+fmt(it.priceSpecial||0)+' · <b style="color:'+mgC+'">'+mg+'%</b>'+c1+c2+c3+'</div>';
     var br=mkEl('div','');br.style.cssText='display:flex;gap:6px;flex-shrink:0';
     var editBtn=mkEl('button','btn pur sm');editBtn.textContent='수정';
     var delBtn=mkEl('button','btn danger sm');delBtn.textContent='삭제';
@@ -623,12 +607,11 @@ function renderManage(){
 
     var ew=mkEl('div','');ew.style.cssText='display:none;margin-top:14px;border-top:1px solid var(--bd);padding-top:14px';
     buildEditForm(ew,it);
-    card.appendChild(ew);
-    c.appendChild(card);
+    card.appendChild(ew);c.appendChild(card);
 
     chk.addEventListener('change',function(){
       if(chk.checked)checkedIds[it.id]=true;else delete checkedIds[it.id];
-      syncChk();
+      updateDelBtn();
     });
     (function(iid,w){
       editBtn.addEventListener('click',function(){w.style.display=w.style.display==='block'?'none':'block';});
@@ -636,17 +619,15 @@ function renderManage(){
     })(it.id,ew);
   });
 
-  // ── 하단 ──
   var dv=mkEl('div','divider');c.appendChild(dv);
   var brow=mkEl('div','');brow.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
   var rsBtn=mkEl('button','btn danger full');rsBtn.textContent='🔄 재고 초기화';rsBtn.addEventListener('click',doResetStock);
   var roBtn=mkEl('button','btn danger full');roBtn.textContent='🗑 주문내역 초기화';roBtn.addEventListener('click',doResetOrders);
   brow.appendChild(rsBtn);brow.appendChild(roBtn);c.appendChild(brow);
 
-  // 선택 삭제
   delSelBtn.addEventListener('click',function(){
     var ids=Object.keys(checkedIds);if(!ids.length)return;
-    if(!confirm(ids.length+'개 품목을 삭제할까요?\n관련 주문도 함께 삭제됩니다.'))return;
+    if(!confirm(ids.length+'개 품목을 삭제할까요?'))return;
     var tasks=[];
     ids.forEach(function(id){
       tasks.push(db.ref('items/'+id).remove());
@@ -654,127 +635,12 @@ function renderManage(){
     });
     Promise.all(tasks).then(function(){toast('✅ '+ids.length+'개 삭제 완료');}).catch(function(e){toast('오류: '+e.message,'err');});
   });
-
-  // 전체 삭제
   delAllBtn.addEventListener('click',function(){
     if(!its.length){toast('삭제할 품목이 없습니다','err');return;}
-    if(!confirm('모든 품목 ('+its.length+'개)을 삭제할까요?\n주문내역도 함께 삭제됩니다.'))return;
+    if(!confirm('모든 품목 ('+its.length+'개)을 삭제할까요?'))return;
     Promise.all([db.ref('items').remove(),db.ref('orders').remove()])
       .then(function(){toast('✅ 전체 삭제 완료');}).catch(function(e){toast('오류: '+e.message,'err');});
   });
-}
-
-// 재고관리용 엑셀 파싱
-var xlParsedManage=[];
-function handleExcelManage(file){
-  if(!file)return;
-  if(!window.XLSX){toast('엑셀 라이브러리 로딩 중입니다','err');return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(!data||data.length<3){toast('데이터가 없습니다','err');return;}
-      var rows=[],errors=[];
-      for(var r=2;r<data.length;r++){
-        var row=data[r];if(!row||!row[1])continue;
-        var item={
-          code:String(row[1]||'').trim(),partNo:String(row[2]||'').trim(),
-          name:String(row[3]||'').trim(),spec:String(row[4]||'EA').trim(),
-          costNormal:+row[9]||0,costSpecial:+row[10]||0,
-          priceDealer:+row[11]||0,priceSpecial:+row[12]||0,
-          stock:+row[13]||0,planned:+row[14]||0,sold:0,
-          cond1Qty:+row[16]||0,cond1Pct:+row[17]||0,
-          cond2Qty:+row[18]||0,cond2Pct:+row[19]||0,
-          cond3Qty:+row[20]||0,cond3Pct:+row[21]||0
-        };
-        if(!item.name){errors.push('행'+(r+1)+': 품명없음');continue;}
-        rows.push(item);
-      }
-      xlParsedManage=rows;
-      var pv=$('m-xl-preview'),cnt=$('m-xl-count'),tbl=$('m-xl-table');
-      if(!pv)return;
-      pv.style.display='block';
-      if(cnt)cnt.textContent='✅ '+rows.length+'개 품목 인식됨';
-      if(tbl){
-        var th=['상품코드','품명','규격','특판가','조건1','조건2','조건3'].map(function(h){
-          return '<th style="padding:7px 10px;color:var(--t2);font-weight:700;white-space:nowrap;border-bottom:1px solid var(--bd);background:var(--bg3)">'+h+'</th>';
-        }).join('');
-        var tbody=rows.map(function(it,i){
-          var bg=i%2===0?'var(--bg1)':'var(--bg2)';
-          return '<tr style="background:'+bg+'">'+
-            [it.code,it.name,it.spec,'₩'+fmt(it.priceSpecial),
-             it.cond1Qty?it.cond1Qty+'개↑'+it.cond1Pct+'%':'-',
-             it.cond2Qty?it.cond2Qty+'개↑'+it.cond2Pct+'%':'-',
-             it.cond3Qty?it.cond3Qty+'개↑'+it.cond3Pct+'%':'-'].map(function(v){
-              return '<td style="padding:6px 10px;font-size:12px;white-space:nowrap;color:#fff">'+v+'</td>';
-            }).join('')+'</tr>';
-        }).join('');
-        tbl.innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr>'+th+'</tr></thead><tbody>'+tbody+'</tbody></table>';
-      }
-    }catch(e){toast('파일 오류: '+e.message,'err');}
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function doAddManualNew(){
-  var g=function(id){var e=$(id);return e?e.value.trim():'';};
-  var name=g('m-name');
-  if(!name){toast('품목명을 입력해 주세요','err');return;}
-  var psp=+(g('m-psp'))||0;
-  if(!psp){toast('특판가를 입력해 주세요','err');return;}
-  var pl=+(g('m-planned'))||0;
-  if(!pl){toast('기획수량을 입력해 주세요','err');return;}
-  db.ref('items').push({
-    code:'',partNo:'',name:name,spec:g('m-spec')||'EA',
-    costNormal:+(g('m-costn'))||0,costSpecial:+(g('m-costs'))||0,
-    priceDealer:+(g('m-priced'))||0,priceSpecial:psp,
-    cond1Qty:+(g('m-c1q'))||0,cond1Pct:+(g('m-c1p'))||0,
-    cond2Qty:+(g('m-c2q'))||0,cond2Pct:+(g('m-c2p'))||0,
-    cond3Qty:+(g('m-c3q'))||0,cond3Pct:+(g('m-c3p'))||0,
-    stock:0,planned:pl,sold:0
-  }).then(function(){
-    toast('✅ '+name+' 등록 완료');
-    var s=$('manage-add-sec');
-    if(s)s.style.display='none';
-  }).catch(function(e){toast('오류: '+e.message,'err');});
-}
-
-function doAddExcelManage(){
-  if(!xlParsedManage||!xlParsedManage.length){toast('엑셀 파일을 먼저 업로드해 주세요','err');return;}
-  var tasks=xlParsedManage.map(function(it){
-    return db.ref('items').push({
-      code:it.code,partNo:it.partNo,name:it.name,spec:it.spec,
-      costNormal:it.costNormal,costSpecial:it.costSpecial,
-      priceDealer:it.priceDealer,priceSpecial:it.priceSpecial,
-      cond1Qty:it.cond1Qty,cond1Pct:it.cond1Pct,
-      cond2Qty:it.cond2Qty,cond2Pct:it.cond2Pct,
-      cond3Qty:it.cond3Qty,cond3Pct:it.cond3Pct,
-      stock:it.stock,planned:it.planned,sold:0
-    });
-  });
-  Promise.all(tasks).then(function(){
-    toast('✅ '+xlParsedManage.length+'개 품목 일괄 등록 완료');
-    xlParsedManage=[];
-    var s=$('manage-add-sec');if(s)s.style.display='none';
-  }).catch(function(e){toast('오류: '+e.message,'err');});
-}
-
-function doResetStock(){
-  if(!confirm('재고를 초기화할까요?\n모든 품목의 판매수량이 0으로 리셋되고 주문내역도 삭제됩니다.'))return;
-  var upd={};Object.keys(iData).forEach(function(k){upd['items/'+k+'/sold']=0;});
-  db.ref().update(upd).then(function(){return db.ref('orders').remove();})
-    .then(function(){toast('재고 초기화 완료');})
-    .catch(function(e){toast('오류: '+e.message,'err');});
-}
-
-function doResetOrders(){
-  if(!confirm('주문내역을 초기화할까요?'))return;
-  var upd={};Object.keys(iData).forEach(function(k){upd['items/'+k+'/sold']=0;});
-  db.ref().update(upd).then(function(){return db.ref('orders').remove();})
-    .then(function(){toast('주문내역 초기화 완료');})
-    .catch(function(e){toast('오류: '+e.message,'err');});
 }
 
 
