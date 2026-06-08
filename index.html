@@ -1155,15 +1155,15 @@ function renderModalList(q){
     row.appendChild(chk);row.appendChild(info);
     if(outFinal){var ot=document.createElement('span');ot.className='tag red';ot.textContent='품절';row.appendChild(ot);}
     list.appendChild(row);
-    if(!outFinal)(function(iid,r,ch){
+    if(!outFinal)(function(iid,r,ch,defQty){
       r.addEventListener('click',function(){
-        if(orderCart[iid]!==undefined)delete orderCart[iid];else orderCart[iid]=1;
+        if(orderCart[iid]!==undefined)delete orderCart[iid];else orderCart[iid]=defQty;
         var cnt=Object.keys(orderCart).length;
         var mc=document.getElementById('modal-count');if(mc)mc.textContent=cnt+'개 선택';
         var mb=document.getElementById('modal-confirm');if(mb){mb.textContent=cnt>0?'선택 완료 ('+cnt+'개)':'선택 완료';mb.className=cnt>0?'btn acc full':'btn ghost full';}
         renderModalList(q);
       });
-    })(it.id,row,chk);
+    })(it.id,row,chk,Math.max(1,Math.min((it.cond1Qty>0?it.cond1Qty:1),dispQty)));
   });
 }
 
@@ -1179,6 +1179,7 @@ function updateCartUI(){
   var rows=keys.map(function(id){
     var it=its.find(function(x){return x.id===id;});if(!it)return '';
     var avl=avail(it),qty=orderCart[id]||1;
+    var step=(it.cond1Qty>0?it.cond1Qty:1);
     var price=it.priceSpecial||0,tierPrice=0,condName='';
     if(it.cond3Qty>0&&qty>=it.cond3Qty){tierPrice=it.cond3Pct;condName='단가3';}
     else if(it.cond2Qty>0&&qty>=it.cond2Qty){tierPrice=it.cond2Pct;condName='단가2';}
@@ -1187,10 +1188,10 @@ function updateCartUI(){
     totalAmt+=qty*fp;
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+it.name+'</div>'+
-      '<div style="font-size:11px;color:var(--t3)">₩'+fmt(fp)+(condName?' ('+condName+')':'')+'</div></div>'+
+      '<div style="font-size:11px;color:var(--t3)">₩'+fmt(fp)+(condName?' ('+condName+')':'')+(it.cond1Qty>0?' · '+fmt(step)+'개 단위':'')+'</div></div>'+
       '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
         '<button class="btn ghost" id="cm-'+id+'" style="width:32px;height:32px;padding:0;font-size:16px;font-weight:700;border-radius:8px">−</button>'+
-        '<input type="number" id="cq-'+id+'" value="'+qty+'" min="1" max="'+avl+'" inputmode="numeric" style="width:52px;text-align:center;font-size:15px;font-weight:700;padding:6px 4px;border-radius:8px">'+
+        '<input type="number" id="cq-'+id+'" value="'+qty+'" min="'+step+'" step="'+step+'" max="'+avl+'" inputmode="numeric" style="width:60px;text-align:center;font-size:15px;font-weight:700;padding:6px 4px;border-radius:8px">'+
         '<button class="btn acc" id="cp-'+id+'" style="width:32px;height:32px;padding:0;font-size:16px;font-weight:700;border-radius:8px">+</button>'+
         '<button class="btn danger" id="cd-'+id+'" style="width:32px;height:32px;padding:0;font-size:14px;border-radius:8px">✕</button>'+
       '</div></div>';
@@ -1208,18 +1209,19 @@ function updateCartUI(){
   keys.forEach(function(id){
     var it=its.find(function(x){return x.id===id;});if(!it)return;
     var avl=avail(it);
-    (function(iid,mq){
+    (function(iid,mq,step){
       var qi=document.getElementById('cq-'+iid);
       var bm=document.getElementById('cm-'+iid);
       var bp=document.getElementById('cp-'+iid);
       var bd=document.getElementById('cd-'+iid);
-      function clamp(v){return Math.max(1,Math.min(mq,parseInt(v)||1));}
+      var lo=Math.min(step,mq);
+      function clamp(v){v=parseInt(v)||lo;return Math.max(lo,Math.min(mq,v));}
       function onChange(){if(!qi)return;orderCart[iid]=clamp(qi.value);qi.value=orderCart[iid];updateCartUI();}
-      if(bm)bm.addEventListener('click',function(){if(qi)qi.value=clamp((parseInt(qi.value)||1)-1);onChange();});
-      if(bp)bp.addEventListener('click',function(){if(qi)qi.value=clamp((parseInt(qi.value)||1)+1);onChange();});
+      if(bm)bm.addEventListener('click',function(){if(qi)qi.value=clamp((parseInt(qi.value)||lo)-step);onChange();});
+      if(bp)bp.addEventListener('click',function(){if(qi)qi.value=clamp((parseInt(qi.value)||lo)+step);onChange();});
       if(qi)qi.addEventListener('change',function(){onChange();});
       if(bd)bd.addEventListener('click',function(){delete orderCart[iid];updateCartUI();});
-    })(id,avl);
+    })(id,avl,(it.cond1Qty>0?it.cond1Qty:1));
   });
 }
 
