@@ -571,7 +571,7 @@ function renderManage(){
   // 엑셀 바디
   var bodyE=document.createElement('div');bodyE.style.display='none';
   var xlGuide=document.createElement('div');xlGuide.style.cssText='background:#f8fafc;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.9;color:var(--t2)';
-  xlGuide.innerHTML='<b style="color:var(--t1)">📋 할인_및_프로모션_관리 양식</b><br>B:상품코드 C:품번 D:품명 E:규격<br>J/K:원가 L:특약점가 M:특판가<br>Q~V:수량별 단가1~3 (수량/단가원)<br>W:브랜드<br><span style="font-size:11px;color:var(--t3)">3행부터 데이터 시작</span>';
+  xlGuide.innerHTML='<b style="color:var(--t1)">📋 할인_및_프로모션_관리 양식</b><br>B:상품코드 C:품번 D:품명 E:규격<br>G:브랜드명<br>J/K:원가 L:특약점가 M:특판가<br>Q~V:수량별 단가1~3 (수량/단가원)<br><span style="font-size:11px;color:var(--t3)">3행부터 데이터 시작</span>';
   bodyE.appendChild(xlGuide);
 
   var xlDrop=document.createElement('div');xlDrop.style.cssText='border:2px dashed rgba(124,92,252,.4);border-radius:12px;padding:24px 20px;text-align:center;cursor:pointer;background:#f8fafc;margin-bottom:12px';
@@ -633,7 +633,7 @@ function renderManage(){
           var it={
             code:String(row[1]||'').trim(),partNo:String(row[2]||'').trim(),
             name:String(row[3]||'').trim(),spec:String(row[4]||'EA').trim(),
-            brand:String(row[22]||'').trim(),
+            brand:String(row[6]||'').trim(),
             costNormal:parseFloat(row[9])||0,costSpecial:parseFloat(row[10])||0,
             priceDealer:parseFloat(row[11])||0,priceSpecial:parseFloat(row[12])||0,
             stock:parseFloat(row[13])||0,planned:parseFloat(row[14])||0,sold:0,
@@ -647,11 +647,11 @@ function renderManage(){
         xlParsed=rows;
         xlPrev.style.display='block';
         xlCnt.textContent='✅ '+rows.length+'개 품목 인식됨'+(errs.length?' ('+errs.length+'개 제외)':'');
-        var th=['코드','품명','규격','특판가','단가1'].map(function(h){return '<th style="padding:6px 10px;color:var(--t2);font-weight:700;white-space:nowrap;border-bottom:1px solid var(--bd);background:var(--bg3)">'+h+'</th>';}).join('');
+        var th=['브랜드','코드','품명','규격','특판가','단가1'].map(function(h){return '<th style="padding:6px 10px;color:var(--t2);font-weight:700;white-space:nowrap;border-bottom:1px solid var(--bd);background:var(--bg3)">'+h+'</th>';}).join('');
         var tb=rows.slice(0,20).map(function(it,i){
           var bg=i%2===0?'var(--bg1)':'var(--bg2)';
           var c1=it.cond1Qty?it.cond1Qty+'개↑ ₩'+fmt(it.cond1Pct):'-';
-          return '<tr style="background:'+bg+'">'+[it.code,it.name,it.spec,'₩'+fmt(it.priceSpecial),c1].map(function(v){return '<td style="padding:5px 10px;font-size:12px;white-space:nowrap;color:var(--t1)">'+v+'</td>';}).join('')+'</tr>';
+          return '<tr style="background:'+bg+'">'+[it.brand||'-',it.code,it.name,it.spec,'₩'+fmt(it.priceSpecial),c1].map(function(v){return '<td style="padding:5px 10px;font-size:12px;white-space:nowrap;color:var(--t1)">'+v+'</td>';}).join('')+'</tr>';
         }).join('');
         xlTbl.innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table>';
       }catch(e){toast('파일 오류: '+e.message,'err');}
