@@ -121,7 +121,7 @@ body.offline #offline-bar{display:block;}
     <!-- 본사 폼 -->
     <div id="form-hq" style="display:none;text-align:left">
       <div style="margin-bottom:11px"><div class="lbl">관리자 이름</div>
-        <input type="text" id="hq-name" value="석정주" readonly style="color: var(--t2); font-weight: 700; background: var(--bg3);"></div>
+        <input type="text" id="hq-name" placeholder="예) 관리자"></div>
       <div style="margin-bottom:16px"><div class="lbl">비밀번호</div>
         <div style="position:relative">
           <input type="password" id="hq-pw" placeholder="비밀번호" style="padding-right:46px">
@@ -174,6 +174,7 @@ body.offline #offline-bar{display:block;}
   </div>
   <div style="padding:10px 14px;background:var(--bg1);border-bottom:1px solid var(--bd);flex-shrink:0">
     <input type="text" id="modal-search" placeholder="🔍 품목명, 상품코드 검색..." style="background:#f8fafc">
+    <select id="modal-brand-sel" style="width:100%;margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:#f8fafc;font-size:14px;font-weight:700;color:var(--t1)"></select>
   </div>
   <div id="modal-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px"></div>
   <div style="padding:12px 14px;background:var(--bg1);border-top:1px solid var(--bd);flex-shrink:0">
@@ -189,8 +190,8 @@ var SAMPLE = [{"code": "382-0001", "partNo": "F10-02DM", "name": "줄자- 원둘
 // ════════════════════════════════
 var db, role, agent, agentId;
 var iData={}, oData={}, aData={}, alData={}; // alData = allocations
-var curTab=0, selRole=null, orderCart={};
-var HQ_PW='2014038';
+var curTab=0, selRole=null, orderCart={}, fieldBrandFilter='', stockBrandFilter='', modalBrandFilter='', hqOrderBrandFilter='', manageBrandFilter='';
+var HQ_PW='hq1234';
 
 // ════════════════════════════════
 // 유틸
@@ -295,7 +296,9 @@ $('btn-login').addEventListener('click',function(){
       var key=null,val=null;
       snap.forEach(function(c){key=c.key;val=c.val();});
       if(!val||val.password!==fpw){$('login-err').style.display='block';$('field-pw').value='';return;}
-      role='field';agent=val.name;agentId=key;enterApp();
+      if(val.isAdmin){role='hq';agent=val.name;agentId='hq';}
+      else{role='field';agent=val.name;agentId=key;}
+      enterApp();
     });
   }else{toast('역할을 선택해 주세요','err');}
 });
@@ -366,6 +369,43 @@ function updateBadge(){
 }
 
 // ════════════════════════════════
+// 브랜드 필터 공용 함수
+// ════════════════════════════════
+function brandMatch(it,filter){
+  var b=(it.brand||'').trim();
+  if(filter==='')return true;
+  if(filter==='__none__')return !b;
+  return b===filter;
+}
+// 셀렉트 박스를 만들어 container에 추가. 유효성 보정된 현재값을 반환
+function buildBrandFilter(c,all,current,onChange){
+  var brands=[];
+  all.forEach(function(it){var b=(it.brand||'').trim();if(b&&brands.indexOf(b)<0)brands.push(b);});
+  brands.sort(function(a,b){return a.localeCompare(b,'ko');});
+  var hasUnset=all.some(function(it){return !((it.brand||'').trim());});
+  if(current&&current!=='__none__'&&brands.indexOf(current)<0)current='';
+  if(current==='__none__'&&!hasUnset)current='';
+  if(!brands.length&&!hasUnset)return current; // 브랜드 정보가 전혀 없으면 표시 안 함
+  var fb=document.createElement('div');fb.style.cssText='margin-bottom:14px';
+  var fl=document.createElement('div');fl.className='lbl';fl.textContent='브랜드 선택';fb.appendChild(fl);
+  var sel=document.createElement('select');
+  sel.style.cssText='width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--bd);background:#f8fafc;font-size:14px;font-weight:700;color:var(--t1)';
+  var opts='<option value="">전체 브랜드 ('+all.length+'종)</option>';
+  brands.forEach(function(b){
+    var cnt=all.filter(function(it){return (it.brand||'').trim()===b;}).length;
+    opts+='<option value="'+b.replace(/"/g,'&quot;')+'"'+(current===b?' selected':'')+'>'+b+' ('+cnt+'종)</option>';
+  });
+  if(hasUnset){
+    var ucnt=all.filter(function(it){return !((it.brand||'').trim());}).length;
+    opts+='<option value="__none__"'+(current==='__none__'?' selected':'')+'>(브랜드 미지정) ('+ucnt+'종)</option>';
+  }
+  sel.innerHTML=opts;
+  sel.addEventListener('change',function(){onChange(sel.value);});
+  fb.appendChild(sel);c.appendChild(fb);
+  return current;
+}
+
+// ════════════════════════════════
 // 재고 현황 (본사)
 // ════════════════════════════════
 function renderStock(){
@@ -380,7 +420,12 @@ function renderStock(){
     '<div class="metric"><div class="lbl">판매 진행률</div><div style="font-size:21px;font-weight:700;font-family:monospace;color:var(--acc)">'+(tot?Math.round(sol/tot*100):0)+'%</div><div style="font-size:11px;color:var(--t2);margin-top:3px">'+fmt(sol)+'/'+fmt(tot)+'개</div></div>'+
     '<div class="metric"><div class="lbl">누적 매출</div><div style="font-size:21px;font-weight:700;font-family:monospace;color:var(--grn)">₩'+fmt(rev)+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">이익 ₩'+fmt(prf)+'</div></div>';
   c.appendChild(mrow);
-  its.forEach(function(it){appendItemCard(it,c,false);});
+  stockBrandFilter=buildBrandFilter(c,its,stockBrandFilter,function(v){stockBrandFilter=v;renderStock();});
+  var list=its.filter(function(it){return brandMatch(it,stockBrandFilter);});
+  if(!list.length){
+    var empty=document.createElement('div');empty.style.cssText='text-align:center;color:var(--t3);font-size:13px;padding:30px 0';empty.textContent='해당 브랜드의 품목이 없습니다';c.appendChild(empty);return;
+  }
+  list.forEach(function(it){appendItemCard(it,c,false);});
 }
 function renderStockField(){
   var c=$('content');c.innerHTML='';
@@ -391,7 +436,21 @@ function renderStockField(){
   info.style.cssText='background:rgba(24,192,114,.07);border-color:rgba(24,192,114,.22);padding:11px 14px;font-size:13px;color:var(--grn);font-weight:700;margin-bottom:14px';
   info.textContent=hasAlloc?'📦 배정 수량 기준으로 표시됩니다':'✅ 모든 재고는 실시간으로 반영됩니다';
   c.appendChild(info);
-  items().forEach(function(it){
+
+  var all=items();
+  fieldBrandFilter=buildBrandFilter(c,all,fieldBrandFilter,function(v){fieldBrandFilter=v;renderStockField();});
+
+  // 필터 적용
+  var list=all.filter(function(it){return brandMatch(it,fieldBrandFilter);});
+
+  if(!list.length){
+    var empty=document.createElement('div');
+    empty.style.cssText='text-align:center;color:var(--t3);font-size:13px;padding:30px 0';
+    empty.textContent='해당 브랜드의 품목이 없습니다';
+    c.appendChild(empty);return;
+  }
+
+  list.forEach(function(it){
     var alloc=agAlloc[it.id]||0;
     var allocSold=orders().filter(function(o){return o.agentId===agentId&&o.itemId===it.id;}).reduce(function(s,o){return s+o.qty;},0);
     appendItemCard(it,c,true,alloc>0?Math.max(0,alloc-allocSold):null,alloc);
@@ -419,7 +478,7 @@ function appendItemCard(it,c,fieldMode,allocRemainOverride,allocTotal){
   card.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
       '<div style="flex:1;padding-right:10px">'+
-        '<div style="font-size:10px;color:var(--t2);margin-bottom:2px">'+(it.code||'')+' '+(it.partNo?'· '+it.partNo:'')+'</div>'+
+        '<div style="font-size:10px;color:var(--t2);margin-bottom:2px">'+(it.brand?'<span style="display:inline-block;background:rgba(124,92,252,.13);color:var(--pur);font-weight:700;padding:1px 6px;border-radius:5px;margin-right:5px">'+it.brand+'</span>':'')+(it.code||'')+' '+(it.partNo?'· '+it.partNo:'')+'</div>'+
         '<div style="font-size:15px;font-weight:700;margin-bottom:2px;color:var(--t1)">'+it.name+'</div>'+
         '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">'+it.spec+'</div>'+
         costInfo+
@@ -495,6 +554,7 @@ function renderManage(){
     mkHalf(l1,id1);mkHalf(l2,id2);bodyM.appendChild(g);
   }
 
+  mkField('브랜드','af-brand','text',null,'예) HANDO');
   mkField('상품코드','af-code','text',null,'예) 382-0001');
   mkField('품번','af-partno','text',null,'예) F10-02DM');
   mkField('품목명 *','af-name','text',null,'예) 비타민C 세럼 30ml');
@@ -511,7 +571,7 @@ function renderManage(){
   // 엑셀 바디
   var bodyE=document.createElement('div');bodyE.style.display='none';
   var xlGuide=document.createElement('div');xlGuide.style.cssText='background:#f8fafc;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.9;color:var(--t2)';
-  xlGuide.innerHTML='<b style="color:var(--t1)">📋 할인_및_프로모션_관리 양식</b><br>B:상품코드 C:품번 D:품명 E:규격<br>J/K:원가 L:특약점가 M:특판가<br>Q~V:수량별 단가1~3 (수량/단가원)<br><span style="font-size:11px;color:var(--t3)">3행부터 데이터 시작</span>';
+  xlGuide.innerHTML='<b style="color:var(--t1)">📋 할인_및_프로모션_관리 양식</b><br>B:상품코드 C:품번 D:품명 E:규격<br>J/K:원가 L:특약점가 M:특판가<br>Q~V:수량별 단가1~3 (수량/단가원)<br>W:브랜드<br><span style="font-size:11px;color:var(--t3)">3행부터 데이터 시작</span>';
   bodyE.appendChild(xlGuide);
 
   var xlDrop=document.createElement('div');xlDrop.style.cssText='border:2px dashed rgba(124,92,252,.4);border-radius:12px;padding:24px 20px;text-align:center;cursor:pointer;background:#f8fafc;margin-bottom:12px';
@@ -573,6 +633,7 @@ function renderManage(){
           var it={
             code:String(row[1]||'').trim(),partNo:String(row[2]||'').trim(),
             name:String(row[3]||'').trim(),spec:String(row[4]||'EA').trim(),
+            brand:String(row[22]||'').trim(),
             costNormal:parseFloat(row[9])||0,costSpecial:parseFloat(row[10])||0,
             priceDealer:parseFloat(row[11])||0,priceSpecial:parseFloat(row[12])||0,
             stock:parseFloat(row[13])||0,planned:parseFloat(row[14])||0,sold:0,
@@ -616,8 +677,9 @@ function renderManage(){
       if(!pl){toast('기획수량을 입력해 주세요','err');return;}
       var code_=document.getElementById('af-code');code_=code_?code_.value.trim():'';
       var partno_=document.getElementById('af-partno');partno_=partno_?partno_.value.trim():'';
+      var brand_=document.getElementById('af-brand');brand_=brand_?brand_.value.trim():'';
       db.ref('items').push({
-        code:code_,partNo:partno_,name:name,spec:inp('af-spec')||'EA',
+        code:code_,partNo:partno_,brand:brand_,name:name,spec:inp('af-spec')||'EA',
         costNormal:num('af-costn'),costSpecial:num('af-costs'),
         priceDealer:num('af-priced'),priceSpecial:psp,
         cond1Qty:num('af-c1q'),cond1Pct:num('af-c1p'),
@@ -631,8 +693,12 @@ function renderManage(){
     }
   });
 
+  // 브랜드 필터
+  manageBrandFilter=buildBrandFilter(c,its,manageBrandFilter,function(v){manageBrandFilter=v;renderManage();});
+  var listIts=its.filter(function(it){return brandMatch(it,manageBrandFilter);});
+
   // 전체선택
-  if(its.length>0){
+  if(listIts.length>0){
     var caRow=document.createElement('div');caRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#f8fafc;border-radius:10px';
     var caChk=document.createElement('input');caChk.type='checkbox';caChk.style.cssText='width:18px;height:18px;cursor:pointer;accent-color:var(--acc)';
     var caLbl=document.createElement('span');caLbl.style.cssText='font-size:13px;color:var(--t2);cursor:pointer';caLbl.textContent='전체 선택';
@@ -654,7 +720,10 @@ function renderManage(){
   }
 
   // 품목 카드
-  its.forEach(function(it){
+  if(its.length&&!listIts.length){
+    var mEmpty=document.createElement('div');mEmpty.style.cssText='text-align:center;color:var(--t3);font-size:13px;padding:24px 0';mEmpty.textContent='해당 브랜드의 품목이 없습니다';c.appendChild(mEmpty);
+  }
+  listIts.forEach(function(it){
     var card=document.createElement('div');card.className='card';
     var cost=it.costSpecial||it.costNormal||0;
     var mg=mgp(it.priceSpecial||0,cost).toFixed(1);
@@ -667,7 +736,7 @@ function renderManage(){
     var chk=document.createElement('input');chk.type='checkbox';chk.className='item-chk';chk.dataset.id=it.id;
     chk.style.cssText='width:20px;height:20px;margin-top:2px;cursor:pointer;accent-color:var(--acc);flex-shrink:0';
     var nb=document.createElement('div');nb.style.cssText='flex:1;min-width:0';
-    nb.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--t1)">'+it.name+'</div>'+
+    nb.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--t1)">'+(it.brand?'<span style="font-size:10px;color:var(--pur);background:rgba(124,92,252,.13);font-weight:700;padding:1px 6px;border-radius:5px;margin-right:5px;vertical-align:middle">'+it.brand+'</span>':'')+it.name+'</div>'+
       '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+it.spec+' · 원가 ₩'+fmt(cost)+' · 특판가 ₩'+fmt(it.priceSpecial||0)+' · <b style="color:'+mgC+'">'+mg+'%</b>'+c1+c2+c3+'</div>';
     var br=document.createElement('div');br.style.cssText='display:flex;gap:6px;flex-shrink:0';
     var editBtn=document.createElement('button');editBtn.className='btn pur sm';editBtn.textContent='수정';
@@ -743,6 +812,7 @@ function buildEditForm(wrap,it){
     function half(lbl,fid,val){var w=document.createElement('div');var l=document.createElement('div');l.className='lbl';l.textContent=lbl;var i=document.createElement('input');i.type='number';i.inputMode='numeric';i.id=fid;i.value=val||0;w.appendChild(l);w.appendChild(i);g.appendChild(w);}
     half(l1,id1,v1);half(l2,id2,v2);wrap.appendChild(g);
   }
+  mkF('브랜드','ef-brand-'+id,'text',it.brand||'');
   mkF('품목명','ef-name-'+id,'text',it.name||'');
   mkF('규격','ef-spec-'+id,'text',it.spec||'EA');
   mkP('원가(일반)','ef-costn-'+id,'원가(특판)','ef-costs-'+id,it.costNormal||0,it.costSpecial||0);
@@ -764,6 +834,7 @@ function buildEditForm(wrap,it){
     if(pl<(iData[id]&&iData[id].sold||0)){toast('기획수량은 판매수량보다 적을 수 없습니다','err');return;}
     db.ref('items/'+id).update({
       name:n,spec:g('ef-spec-'+id)||'EA',
+      brand:g('ef-brand-'+id),
       costNormal:parseFloat(g('ef-costn-'+id))||0,costSpecial:parseFloat(g('ef-costs-'+id))||0,
       priceDealer:parseFloat(g('ef-priced-'+id))||0,priceSpecial:p,
       cond1Qty:parseFloat(g('ef-c1q-'+id))||0,cond1Pct:parseFloat(g('ef-c1p-'+id))||0,
@@ -836,12 +907,13 @@ function renderAccounts(){
     // 카드 상단
     var topRow=document.createElement('div');topRow.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
     var nameEl=document.createElement('div');
-    nameEl.innerHTML='<div style="font-size:15px;font-weight:700;color:var(--t1)">'+acc.name+'</div><div style="font-size:12px;color:var(--t3)">ID: '+acc.userId+'</div>';
-    var br=document.createElement('div');br.style.cssText='display:flex;gap:6px';
+    nameEl.innerHTML='<div style="font-size:15px;font-weight:700;color:var(--t1)">'+acc.name+(acc.isAdmin?' <span style="font-size:10px;font-weight:700;color:var(--pur);background:rgba(124,92,252,.13);padding:2px 7px;border-radius:5px;vertical-align:middle">관리자</span>':'')+'</div><div style="font-size:12px;color:var(--t3)">ID: '+acc.userId+'</div>';
+    var br=document.createElement('div');br.style.cssText='display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end';
+    var adminBtn=document.createElement('button');adminBtn.className=acc.isAdmin?'btn pur sm':'btn ghost sm';adminBtn.textContent=acc.isAdmin?'관리자 해제':'관리자 지정';
     var allocBtn=document.createElement('button');allocBtn.className='btn acc sm';allocBtn.textContent='📦 수량배정';
     var pwBtn=document.createElement('button');pwBtn.className='btn ghost sm';pwBtn.textContent='PW변경';
     var delBtn=document.createElement('button');delBtn.className='btn danger sm';delBtn.textContent='삭제';
-    br.appendChild(allocBtn);br.appendChild(pwBtn);br.appendChild(delBtn);
+    br.appendChild(adminBtn);br.appendChild(allocBtn);br.appendChild(pwBtn);br.appendChild(delBtn);
     topRow.appendChild(nameEl);topRow.appendChild(br);card.appendChild(topRow);
 
     // 주문 통계
@@ -951,6 +1023,15 @@ function renderAccounts(){
       Promise.all([db.ref('accounts/'+acc.id).remove(), db.ref('allocations/'+acc.id).remove()])
         .then(function(){toast('계정 삭제 완료');}).catch(function(e){toast('오류: '+e.message,'err');});
     });
+    (function(aid,aname,cur){
+      adminBtn.addEventListener('click',function(){
+        var next=!cur;
+        if(next&&!confirm('['+aname+'] 계정에 관리자 권한을 부여할까요?\n해당 아이디로 로그인하면 본사(관리자) 화면을 사용할 수 있습니다.'))return;
+        db.ref('accounts/'+aid+'/isAdmin').set(next)
+          .then(function(){toast(next?'✅ '+aname+' 관리자 지정':'관리자 권한 해제');})
+          .catch(function(e){toast('오류: '+e.message,'err');});
+      });
+    })(acc.id, acc.name, !!acc.isAdmin);
     setTimeout(function(){
       var sb=document.getElementById('pw-save-'+acc.id);
       if(sb)sb.addEventListener('click',function(){
@@ -1025,17 +1106,35 @@ function buildAC(inp_,list_,onSel){
 function openModal(){
   var m=$('product-modal');if(!m)return;
   m.classList.add('show');document.body.style.overflow='hidden';
-  renderModalList('');
+  populateModalBrands();
+  renderModalList(($('modal-search')&&$('modal-search').value||'').toLowerCase());
   setTimeout(function(){var s=$('modal-search');if(s)s.focus();},100);
+}
+function populateModalBrands(){
+  var sel=$('modal-brand-sel');if(!sel)return;
+  var all=items();
+  var brands=[];
+  all.forEach(function(it){var b=(it.brand||'').trim();if(b&&brands.indexOf(b)<0)brands.push(b);});
+  brands.sort(function(a,b){return a.localeCompare(b,'ko');});
+  var hasUnset=all.some(function(it){return !((it.brand||'').trim());});
+  if(modalBrandFilter&&modalBrandFilter!=='__none__'&&brands.indexOf(modalBrandFilter)<0)modalBrandFilter='';
+  if(modalBrandFilter==='__none__'&&!hasUnset)modalBrandFilter='';
+  if(!brands.length&&!hasUnset){sel.style.display='none';return;}
+  sel.style.display='block';
+  var opts='<option value="">전체 브랜드</option>';
+  brands.forEach(function(b){opts+='<option value="'+b.replace(/"/g,'&quot;')+'"'+(modalBrandFilter===b?' selected':'')+'>'+b+'</option>';});
+  if(hasUnset)opts+='<option value="__none__"'+(modalBrandFilter==='__none__'?' selected':'')+'>(브랜드 미지정)</option>';
+  sel.innerHTML=opts;
 }
 function closeModal(){var m=$('product-modal');if(m){m.classList.remove('show');document.body.style.overflow='';}updateCartUI();}
 $('modal-close').addEventListener('click',closeModal);
 $('modal-confirm').addEventListener('click',closeModal);
 $('modal-search').addEventListener('input',function(){renderModalList(this.value.toLowerCase());});
+$('modal-brand-sel').addEventListener('change',function(){modalBrandFilter=this.value;renderModalList(($('modal-search')&&$('modal-search').value||'').toLowerCase());});
 
 function renderModalList(q){
   var list=document.getElementById('modal-list');if(!list)return;
-  var its=items().filter(function(it){return !q||(it.name&&it.name.toLowerCase().includes(q))||(it.code&&it.code.toLowerCase().includes(q));});
+  var its=items().filter(function(it){return (!q||(it.name&&it.name.toLowerCase().includes(q))||(it.code&&it.code.toLowerCase().includes(q)))&&brandMatch(it,modalBrandFilter);});
   list.innerHTML='';
   its.forEach(function(it){
     var avl=avail(it),out=avl<=0,sel=orderCart[it.id]!==undefined;
@@ -1166,15 +1265,20 @@ function doSubmit(){
 // ════════════════════════════════
 function renderHQOrders(){
   var c=$('content');c.innerHTML='';
-  var ords=orders();
-  var totalRev=ords.reduce(function(s,o){return s+o.qty*(o.finalPrice||0);},0);
+  var allOrds=orders();
 
-  // 상단 요약
+  // 상단 요약 (필터 반영, 내용은 아래에서 채움)
   var sumCard=document.createElement('div');sumCard.className='card';sumCard.style.padding='12px 14px';
+  c.appendChild(sumCard);
+
+  // 브랜드 필터 (품목 기준)
+  hqOrderBrandFilter=buildBrandFilter(c,items(),hqOrderBrandFilter,function(v){hqOrderBrandFilter=v;renderHQOrders();});
+
+  var ords=allOrds.filter(function(o){return brandMatch({brand:(iData[o.itemId]||{}).brand},hqOrderBrandFilter);});
+  var totalRev=ords.reduce(function(s,o){return s+o.qty*(o.finalPrice||0);},0);
   sumCard.innerHTML='<div style="display:flex;gap:12px;align-items:center">'+
     '<div style="flex:1"><div style="font-size:11px;color:var(--t2);margin-bottom:2px">총 주문</div><div style="font-size:20px;font-weight:700;font-family:monospace">'+ords.length+'건</div></div>'+
     '<div style="flex:1"><div style="font-size:11px;color:var(--t2);margin-bottom:2px">총 매출</div><div style="font-size:20px;font-weight:700;font-family:monospace;color:var(--grn)">₩'+fmt(totalRev)+'</div></div></div>';
-  c.appendChild(sumCard);
 
   // 버튼 행
   var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap';
@@ -1192,10 +1296,15 @@ function renderHQOrders(){
   btnRow.appendChild(rbtn);
   c.appendChild(btnRow);
 
-  if(!ords.length){
+  if(!allOrds.length){
     var em=document.createElement('div');em.style.cssText='text-align:center;padding:40px;color:var(--t3)';
     em.innerHTML='<div style="font-size:40px;margin-bottom:10px">📋</div><div style="font-size:14px">주문 내역이 없습니다</div>';
     c.appendChild(em);return;
+  }
+  if(!ords.length){
+    var em2=document.createElement('div');em2.style.cssText='text-align:center;padding:40px;color:var(--t3)';
+    em2.innerHTML='<div style="font-size:40px;margin-bottom:10px">📋</div><div style="font-size:14px">해당 브랜드의 주문이 없습니다</div>';
+    c.appendChild(em2);return;
   }
 
   // 영업사원별 그룹
@@ -1282,7 +1391,7 @@ function renderHQOrders(){
           row.innerHTML=
             '<div style="flex:1;min-width:0">'+
               '<div style="color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(it?it.name:'품목없음')+'</div>'+
-              '<div style="color:var(--t3);font-size:10px">'+(it?it.code||'':'')+' '+(o.appliedCond&&o.appliedCond!='없음'?'· '+o.appliedCond:'')+'</div>'+
+              '<div style="color:var(--t3);font-size:10px">'+(it&&it.brand?'['+it.brand+'] ':'')+(it?it.code||'':'')+' '+(o.appliedCond&&o.appliedCond!='없음'?'· '+o.appliedCond:'')+'</div>'+
             '</div>'+
             '<div style="text-align:right;flex-shrink:0;margin-left:8px">'+
               '<div style="color:var(--t2)">'+fmt(o.qty)+'개 × ₩'+fmt(o.finalPrice||0)+'</div>'+
